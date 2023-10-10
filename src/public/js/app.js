@@ -12,13 +12,16 @@ let cameraOff = false;
 async function getCameras() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    // console.log(devices);
     const cameras = devices.filter((device) => device.kind === "videoinput");
-    // console.log(cameras);
+    // console.log(myStream.getVideoTracks());
+    const currentCamera = myStream.getVideoTracks()[0];
     cameras.forEach((camera) => {
       const option = document.createElement("option");
       option.value = camera.deviceId;
       option.innerText = camera.label;
+      if (currentCamera.label === camera.label) {
+        option.selected = true;
+      }
       camerasSelect.appendChild(option);
     });
   } catch (e) {
@@ -26,14 +29,23 @@ async function getCameras() {
   }
 }
 
-async function getMedia() {
+async function getMedia(deviceId) {
+  const initialConstraints = {
+    audio: true,
+    video: { facingMode: "user" },
+  };
+  const cameraConstraints = {
+    audio: true,
+    video: { deviceId: { exact: deviceId } },
+  };
   try {
-    myStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: true,
-    });
+    myStream = await navigator.mediaDevices.getUserMedia(
+      deviceId ? cameraConstraints : initialConstraints
+    );
     myFace.srcObject = myStream;
-    await getCameras();
+    if (!deviceId) {
+      await getCameras();
+    }
   } catch (e) {
     console.log(e);
   }
@@ -42,7 +54,6 @@ async function getMedia() {
 getMedia();
 
 function handleMuteClick() {
-  // console.log(myStream.getAudioTracks());
   myStream
     .getAudioTracks()
     .forEach((track) => (track.enabled = !track.enabled));
@@ -56,7 +67,6 @@ function handleMuteClick() {
 }
 
 function handleCameraClick() {
-  // console.log(myStream.getVideoTracks());
   myStream
     .getVideoTracks()
     .forEach((track) => (track.enabled = !track.enabled));
@@ -68,5 +78,12 @@ function handleCameraClick() {
     cameraOff = true;
   }
 }
+
+async function handleCameraChange() {
+  // console.log(camerasSelect.value);
+  await getMedia(camerasSelect.value);
+}
+
 muteBtn.addEventListener("click", handleMuteClick);
 cameraBtn.addEventListener("click", handleCameraClick);
+camerasSelect.addEventListener("input", handleCameraChange);
